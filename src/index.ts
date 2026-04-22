@@ -17,6 +17,13 @@ export interface AppManifestLite {
   appName: string;
   /** Lucide icon name (resolved by shell). */
   icon?: string;
+  /**
+   * Image-based icon URL. When set, takes precedence over `icon` in surfaces
+   * that support raster icons (window title bar, taskbar, launchpad, notifications).
+   * Use a relative `assets/...` path (the shell rewrites it to
+   * `/api/apps/<id>/assets/...`) or an absolute URL.
+   */
+  image?: string;
   color?: string;
   windowType: string;
   defaultSize?: { width: number; height: number };
@@ -70,39 +77,51 @@ export function defineApp(def: AppDefinition): AppDefinition {
   return def;
 }
 
-// ── HTTP bus client (used by apps and the shell adapter alike) ──
+// ── App HTTP client (used by apps and the shell adapter alike) ──
 
-export async function busCall<T = unknown>(
-  service: string,
+/**
+ * Call a bus-managed app method over HTTP.
+ *
+ * 路径：`POST|GET /api/apps/<appId>/<method>`，verb 由 app 端
+ * `MethodDecl.http_method` 决定（默认 POST）。响应必须是 JSON；
+ * 二进制 / 大流量走应用数据面（`/api/apps/<appId>/data/*`），不经本函数。
+ */
+export async function appCall<T = unknown>(
+  appId: string,
   method: string,
   payload: unknown = {},
+  init?: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" },
 ): Promise<T> {
-  const r = await fetch("/api/bus/call", {
-    method: "POST",
+  const verb = init?.method ?? "POST";
+  const hasBody = verb !== "GET" && verb !== "DELETE" && verb !== "HEAD";
+  const r = await fetch(`/api/apps/${encodeURIComponent(appId)}/${method}`, {
+    method: verb,
     credentials: "include",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ service, method, payload }),
+    headers: hasBody ? { "content-type": "application/json" } : undefined,
+    body: hasBody ? JSON.stringify(payload) : undefined,
   });
   if (!r.ok) {
     const text = await r.text().catch(() => `${r.status}`);
-    throw new Error(`bus.call(${service}.${method}) failed: ${text}`);
+    throw new Error(`appCall(${appId}.${method}) failed: ${text}`);
   }
   return (await r.json()) as T;
 }
 
-/** Convenience: scope all calls to a specific service. */
-export function makeBusClient(service: string) {
+/** Convenience: scope all calls to a specific app. */
+export function makeAppClient(appId: string) {
   return {
-    call: <T = unknown>(method: string, payload: unknown = {}) =>
-      busCall<T>(service, method, payload),
-    callService: busCall,
+    call: <T = unknown>(
+      method: string,
+      payload: unknown = {},
+      init?: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" },
+    ) => appCall<T>(appId, method, payload, init),
   };
 }
 
 export function makeShellApi(appId: string): ShellApi {
   return {
     notify: (input) =>
-      busCall("notification_center", "notify", {
+      appCall("notification_center", "notify", {
         app_id: input.appId ?? appId,
         category_id: input.categoryId ?? "default",
         category_label: input.categoryLabel,
