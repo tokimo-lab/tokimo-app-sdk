@@ -1,0 +1,19 @@
+{
+  "name": "@tokimo/app-sdk",
+  "version": "0.1.0",
+  "description": "SDK for third-party Tokimo apps: defineApp + bus call helpers + shell context.",
+  "license": "MIT",
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "files": [
+    "src"
+  ],
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0"
+  },
+  "dependencies": {}
+}
