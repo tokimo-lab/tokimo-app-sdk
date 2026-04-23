@@ -8,14 +8,20 @@ runtime object so the app code stays decoupled from shell internals.
 
 ## Exports
 
-| Export               | Purpose                                             |
-|----------------------|-----------------------------------------------------|
-| `defineApp(def)`     | Default-exported entry of every app's UI bundle     |
-| `useBus()`           | Call own backend bus methods                        |
-| `useBusService(svc)` | Call another service's bus methods (cross-app)      |
-| `useNotify()`        | Send a Tokimo notification (system inbox + toast)   |
-| `useAppT()`          | i18n hook auto-bound to the app's namespace         |
-| `useWindowManager()` | Open/close other windows (e.g. cross-app workflows) |
+| Export             | Purpose                                                  |
+|--------------------|----------------------------------------------------------|
+| `defineApp(def)`   | Default-exported entry of every app's UI bundle          |
+| `makeShellApi()`   | Constructs the `ShellApi` handle (notify / locale / …)   |
+| `makeTranslator()` | i18n helper auto-bound to the app's namespace            |
+| `AppRuntimeCtx`    | Type the shell passes into your `mount(ctx)` function    |
+| `ShellApi`         | Type of the shell-provided handle (notify, future media) |
+| `NotifyInput`      | Payload shape for `ctx.shell.notify(...)`                |
+
+App ↔ backend communication is **plain typed `fetch()`**: every app exposes
+its own axum router on a Unix domain socket and the shell server transparently
+reverse-proxies `/api/apps/<app>/<route>` to it. There is no generic `appCall`
+wrapper — call your own routes directly so React Query / typed clients stay
+ergonomic.
 
 ## Status
 

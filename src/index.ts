@@ -4,8 +4,15 @@
  * Each app bundles its own React + UI deps and exposes a `mount(container, ctx)`
  * function. The shell's adapter renders an empty div and calls `mount()` from a
  * `useEffect`, so the app gets a fully isolated React root inside the shell's
- * window content. Communication with the shell happens through plain async calls
- * over the bus HTTP gateway — no cross-realm React contexts.
+ * window content.
+ *
+ * 后端通信契约：每个 app 子进程自己起一个 axum server 监听 UDS，server 端通过
+ * `/api/apps/<id>/<rest>` 透明反代过去。app 前端**直接 `fetch("/api/apps/<id>/...")`**
+ * 即可（保持现有 typed REST + React Query 链路不变）；SDK 不再提供通用 RPC 包装。
+ *
+ * 跨 app 调用（如 `notification_center.notify`）通过 `ctx.shell.*` 暴露的
+ * 命名能力发起，shell 内部决定路由方式（local svc 仍走 bus invoke、子进程 app
+ * 走 UDS 反代）。业务代码不应该硬编码这些 URL。
  *
  * See docs/app/multi-process-architecture.md for the full design.
  */
@@ -77,58 +84,42 @@ export function defineApp(def: AppDefinition): AppDefinition {
   return def;
 }
 
-// ── App HTTP client (used by apps and the shell adapter alike) ──
+// ── Shell-injected capabilities ──
 
 /**
- * Call a bus-managed app method over HTTP.
+ * 通过 shell 提供的 notification_center 发送通知。
  *
- * 路径：`POST|GET /api/apps/<appId>/<method>`，verb 由 app 端
- * `MethodDecl.http_method` 决定（默认 POST）。响应必须是 JSON；
- * 二进制 / 大流量走应用数据面（`/api/apps/<appId>/data/*`），不经本函数。
+ * 路由：`POST /api/apps/notification_center/notify`。
+ * notification_center 当前是 server 内的 local service（走 bus invoke），未来若拆成
+ * 独立子进程，URL 不变（透明 UDS 反代）。**业务代码请用 `ctx.shell.notify(...)`**，
+ * 不要直接 fetch 这个 URL。
  */
-export async function appCall<T = unknown>(
-  appId: string,
-  method: string,
-  payload: unknown = {},
-  init?: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" },
-): Promise<T> {
-  const verb = init?.method ?? "POST";
-  const hasBody = verb !== "GET" && verb !== "DELETE" && verb !== "HEAD";
-  const r = await fetch(`/api/apps/${encodeURIComponent(appId)}/${method}`, {
-    method: verb,
+async function postNotify(
+  input: NotifyInput,
+  fallbackAppId: string,
+): Promise<void> {
+  const r = await fetch("/api/apps/notification_center/notify", {
+    method: "POST",
     credentials: "include",
-    headers: hasBody ? { "content-type": "application/json" } : undefined,
-    body: hasBody ? JSON.stringify(payload) : undefined,
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      app_id: input.appId ?? fallbackAppId,
+      category_id: input.categoryId ?? "default",
+      category_label: input.categoryLabel,
+      title: input.title,
+      body: input.body,
+      level: input.level,
+    }),
   });
   if (!r.ok) {
     const text = await r.text().catch(() => `${r.status}`);
-    throw new Error(`appCall(${appId}.${method}) failed: ${text}`);
+    throw new Error(`notify failed: ${text}`);
   }
-  return (await r.json()) as T;
-}
-
-/** Convenience: scope all calls to a specific app. */
-export function makeAppClient(appId: string) {
-  return {
-    call: <T = unknown>(
-      method: string,
-      payload: unknown = {},
-      init?: { method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" },
-    ) => appCall<T>(appId, method, payload, init),
-  };
 }
 
 export function makeShellApi(appId: string): ShellApi {
   return {
-    notify: (input) =>
-      appCall("notification_center", "notify", {
-        app_id: input.appId ?? appId,
-        category_id: input.categoryId ?? "default",
-        category_label: input.categoryLabel,
-        title: input.title,
-        body: input.body,
-        level: input.level,
-      }),
+    notify: (input) => postNotify(input, appId),
   };
 }
 
