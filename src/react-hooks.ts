@@ -11,6 +11,7 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type {
   AppRuntimeCtx,
+  MediaSessionSnapshot,
   MediaSessionSource,
   MenuBarConfig,
   MusicPlaybackSnapshot,
@@ -68,6 +69,25 @@ export function useShellMediaSession(
     if (!source) return;
     ctx.shell.media.updateSession(source.id, source);
   }, [ctx.shell.media, source]);
+}
+
+/**
+ * Subscribe to the host's media session snapshot (active source + persisted
+ * playback data). Returns a reactive value that re-renders on snapshot change.
+ *
+ * Third-party apps use this to read host state they don't own — e.g. the
+ * currently playing source across apps, or the server-restored playback data
+ * needed to resume after a reload.
+ */
+export function useShellMediaSessionSnapshot(
+  ctx: AppRuntimeCtx,
+): MediaSessionSnapshot {
+  const media = ctx.shell.media;
+  return useSyncExternalStore(
+    (cb) => media.subscribeSession(cb),
+    () => media.getSessionSnapshot(),
+    () => media.getSessionSnapshot(),
+  );
 }
 
 // ── Menubar ────────────────────────────────────────────────────────────────

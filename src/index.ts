@@ -131,6 +131,35 @@ export interface ShellMediaApi {
   requestPlay: (id: string, provider?: string) => void;
   notifyPause: (id: string, provider?: string) => void;
   notifyClose: (id: string, provider?: string) => void;
+  /**
+   * 读取 host 当前媒体会话快照（活跃源 + 持久化播放数据）。
+   * 跨 app 只读访问：apple-music 需根据 host 活跃源判断是否在播放自己。
+   */
+  getSessionSnapshot: () => MediaSessionSnapshot;
+  /** 订阅会话快照变化（activeSource / rawPlaybackData 任一变动都触发）。 */
+  subscribeSession: (listener: () => void) => () => void;
+  /**
+   * 通知 host 当前源状态需要持久化。只对 active source 生效。
+   * `immediate: true` 跳过 debounce（用于 play/pause/next 等关键动作）。
+   */
+  notifySaveNeeded: (
+    id: string,
+    provider?: string,
+    immediate?: boolean,
+  ) => void;
+}
+
+/** host 侧共享给 bundle 的媒体会话只读快照。 */
+export interface MediaSessionSnapshot {
+  activeSource: MediaSessionSource | null;
+  /**
+   * 从服务端拉回的持久化播放数据，由 host 定义具体类型。
+   * 对 SDK 是 opaque —— bundle 自行 cast 到业务类型（如 apple-music 的
+   * `PlaybackStateData`）。
+   */
+  rawPlaybackData: unknown;
+  /** host 初次加载完成后置 true。 */
+  rawPlaybackDataReady: boolean;
 }
 
 export interface MediaSessionSource {
