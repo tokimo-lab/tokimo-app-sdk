@@ -10,7 +10,8 @@
     "src"
   ],
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./react": "./src/react-hooks.ts"
   },
   "peerDependencies": {
     "react": "^19.0.0"
