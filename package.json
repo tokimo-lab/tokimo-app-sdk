@@ -1,5 +1,5 @@
 {
-  "name": "@tokimo/app-sdk",
+  "name": "@tokimo/sdk",
   "version": "0.1.0",
   "description": "SDK for third-party Tokimo apps: defineApp + bus call helpers + shell context.",
   "license": "MIT",

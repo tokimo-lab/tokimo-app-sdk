@@ -1,5 +1,5 @@
 /**
- * @tokimo/app-sdk — runtime contract between third-party apps and the shell.
+ * @tokimo/sdk — runtime contract between third-party apps and the shell.
  *
  * Each app bundles its own React + UI deps and exposes a `mount(container, ctx)`
  * function. The shell's adapter renders an empty div and calls `mount()` from a

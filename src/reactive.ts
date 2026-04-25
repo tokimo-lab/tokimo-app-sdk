@@ -64,7 +64,7 @@ export function createReactiveSource<T>(
         try {
           listener();
         } catch (err) {
-          console.error("[app-sdk] reactive source listener threw:", err);
+          console.error("[tokimo-sdk] reactive source listener threw:", err);
         }
       }
     },

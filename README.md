@@ -1,4 +1,4 @@
-# @tokiomo/app-sdk
+# @tokimo/sdk
 
 Runtime contract between the **Tokimo shell** and **third-party Tokimo apps**.
 
