@@ -1,3 +1,4 @@
+import type { ShellAppearanceApi } from "./appearance";
 import type { ShellMediaApi } from "./media";
 import type { ShellMenuBarApi } from "./menubar";
 import type { NotifyInput } from "./notify";
@@ -8,6 +9,15 @@ export interface AppRuntimeCtx {
   windowId: string;
   appId: string;
   locale: string;
+  /**
+   * Resolved theme at mount time. Snapshot only — does NOT update when the
+   * user toggles theme.
+   *
+   * @deprecated Prefer `useShellAppearance(ctx)` (reactive). Keeping this
+   * field for back-compat with apps that pass it to `ConfigProvider
+   * defaultMode` at mount time. Will be removed once all bundled apps
+   * migrate.
+   */
   theme: "light" | "dark";
   shell: ShellApi;
 }
@@ -22,4 +32,6 @@ export interface ShellApi {
   toast: ShellToastApi;
   /** 窗口内导航（route / replace / goBack）。 */
   windowNav: ShellWindowNavApi;
+  /** 主题 / 标题栏风格快照 + 订阅（用于适配 macOS 红绿灯位置等）。 */
+  appearance: ShellAppearanceApi;
 }

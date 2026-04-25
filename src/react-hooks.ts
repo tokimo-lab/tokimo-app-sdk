@@ -10,6 +10,7 @@
  */
 import { useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import type {
+  AppAppearanceSnapshot,
   AppRuntimeCtx,
   MediaSessionSnapshot,
   MediaSessionSource,
@@ -144,4 +145,20 @@ export function useShellWindowNav(ctx: AppRuntimeCtx): UseShellWindowNavResult {
 /** Stable reference to the toast API (it's already a stable singleton). */
 export function useShellToast(ctx: AppRuntimeCtx): ShellToastApi {
   return ctx.shell.toast;
+}
+
+// ── Appearance (theme / title-bar style) ────────────────────────────────────
+
+/**
+ * Subscribe to the host's appearance snapshot. Reactive across theme toggles
+ * and title-bar style changes (so apps with overlay chrome can re-pad their
+ * sidebar for macOS traffic-lights without a window remount).
+ */
+export function useShellAppearance(ctx: AppRuntimeCtx): AppAppearanceSnapshot {
+  const ap = ctx.shell.appearance;
+  return useSyncExternalStore(
+    (cb) => ap.subscribe(cb),
+    () => ap.getSnapshot(),
+    () => ap.getSnapshot(),
+  );
 }

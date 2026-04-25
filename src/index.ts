@@ -20,10 +20,12 @@
  * ./shell-api, ./media, ./menubar, ./toast, ./window-nav, ./notify。
  */
 
+export * from "./appearance";
 export * from "./manifest";
 export * from "./media";
 export * from "./menubar";
 export * from "./notify";
+export * from "./reactive";
 export * from "./runtime";
 export * from "./shell-api";
 export * from "./toast";

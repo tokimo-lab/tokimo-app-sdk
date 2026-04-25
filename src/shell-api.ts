@@ -17,6 +17,7 @@ export function makeShellApi(
     menubar: injections.menubar,
     toast: injections.toast,
     windowNav: injections.windowNav,
+    appearance: injections.appearance,
   };
 }
 
